@@ -2,18 +2,23 @@
 #%%
 from postprocessing_files import *
 import os
+import unittest
 # %%
 curren_folder = os.getcwd()
 
 # DO NOT FORGET TO PUT IN VOIGT NOTATION
 
-stiffness_arquive = "stiffess_PBC.out"
-ClassInitiation = AnisoIndex(stiffness_arquive)
-# A=ClassInitiation.CalculateCalculateEngineeringConstants()
+results = os.getcwd()+r"\MBC"
+# stiffness_arquive = fr"D:\Masters\Masters\Thesis\Text\Rato\Capitulo de Livro - Jonas dissertação\Visual Studio Code\PostProcessingResults\teste\stiffness.out"
+ClassInitiation = AnisoIndex()
+ClassInitiation.HomogenizeResults(results_folder=results)
+ClassInitiation.ExportStiffness(folder="teste")
+ClassInitiation.CalculateIndicators("stiffness.out")
 
-# Au = ClassInitiation.aniso_index_user_material_simmetric
-# Az = ClassInitiation.ZenerIndex
-# Fr = ClassInitiation.Frobenius
+
+Au = ClassInitiation.aniso_index_user_material_simmetric
+Az = ClassInitiation.ZenerIndex
+Fr = ClassInitiation.Frobenius
 
 # print("Norms: \n\n ++++++++++++")
 # ClassInitiation.PrintPretty(Au)
@@ -22,7 +27,6 @@ ClassInitiation = AnisoIndex(stiffness_arquive)
 
 # %%
 
-# 
 matrix = ClassInitiation.stiffness_matrix_simmetric
 K=ClassInitiation.BulkModulusTensor(matrix)
 print("K invariants:")
@@ -35,74 +39,6 @@ PrintPretty(L.I1)
 PrintPretty(L.I2)
 PrintPretty(L.I3)
 
-# ClassInitiation.PrincipalDirectionsOfAnisotropy(matrix)
-# ClassInitiation.K
-
-EngDictPlain = {
-
-    'E1':24.8E3,
-    'E2':24.8E3,
-    'E3':8.5E3,
-    'G12':4.2E3,
-    'G23':4.2E3,
-    'G13':4.2E3,
-    'v12':0.1,
-    'v13':0.28,
-    'v23':0.28
-}
-
-
-
-# EngDictTwill = {
-
-#     'E1':19.2e3,
-#     'E2':19.2e3,
-#     'E3':10.92e3,
-#     'G12':3.92e3,
-#     'G23':3.78e3,
-#     'G13':3.78e3,
-#     'v12':0.13,
-#     'v13':0.305,
-#     'v23':0.305
-# }
-
-# EngDictSatin = {
-
-#     'E1':25.6e3,
-#     'E2':25.6e3,
-#     'E3':15.65e3,
-#     'G12':5.67e3,
-#     'G23':5.42e3,
-#     'G13':5.42e3,
-#     'v12':0.13,
-#     'v13':0.283,
-#     'v23':0.283
-# }
-# ClassInitiation.SetExperimentalProperties(EngDictPlain)
-# # ClassInitiation.ZenerIndexExperimental
-# matrix = ClassInitiation.experimental_matrix_stiffness
-# K=ClassInitiation.BulkModulusTensor(matrix)
-# print("K invariants:")
-# PrintPretty(K.I1)
-# PrintPretty(K.I2)
-# PrintPretty(K.I3)
-# L=ClassInitiation.DeviatoryModulusTensor(matrix)
-# print("L invariants:")
-# PrintPretty(L.I1)
-# PrintPretty(L.I2)
-# PrintPretty(L.I3)
-
-'''
-CLT Comparison
-'''
-# from CLT import*
-
-# Eight_harness_experimental_CLT()
-
-matrix = ClassInitiation.stiffness_matrix_simmetric
-
-ClassContraction = TensorContracion(matrix)
-c_new=ClassContraction.C_contract
 
 def WriteTexBmatrix(matrix):
     

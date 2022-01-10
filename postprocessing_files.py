@@ -4,6 +4,8 @@
 from create_matrix import NumptArrrayToBmatrix
 import numpy as np
 import math as m
+from PostProcessing_homot_tool import PostProcessing
+import os
 # from PostProcessing import CalculateCalculateEngineeringConstants
 # from principal_directions_anisotropy import PrincipalAnisotropyDiretions
 class Invariants():
@@ -114,10 +116,17 @@ class TensorContracion():
                 b=b+1
             a=a+1
         
-class AnisoIndex(NumptArrrayToBmatrix):
+class AnisoIndex(NumptArrrayToBmatrix,PostProcessing):
 
 
-    def __init__(self,file):
+    def __init__(self,file=False):
+        pass
+
+    def CalculateIndicators(self,file):
+        '''
+        Read Stiffness.out file, and calculate indicators
+        '''
+
 
         self.read_matrix(file)
         self.WriteVoigtNotationOfTheMatrix()
@@ -166,99 +175,23 @@ class AnisoIndex(NumptArrrayToBmatrix):
     def PrintPretty(string, format="{:8.3}"):
         print(f"{format}".format(string))
 
-    def CalculateCalculateEngineeringConstants(self):
+    def CheckIfFolderExist(self,folder):
         '''
-        Method to calculate the Engi;neering Constants
+        Check if the folder exists. If don't, create it
         '''
-        # df = pd.DataFrame(ComplianceMatrix)
-
-        ComplianceMatrix = self.compliance_matrix_original
-
-        E1 = 1/ComplianceMatrix[0,0]
-        E2 = 1/ComplianceMatrix[1,1]
-        E3 = 1/ComplianceMatrix[2,2]
-        G12 = 1/ComplianceMatrix[3,3]
-        G23 = 1/ComplianceMatrix[4,4]
-        G31 = 1/ComplianceMatrix[5,5]
-
-        v21 = -E2*ComplianceMatrix[0,1]
-        v31 = -E3*ComplianceMatrix[0,2]
-        eta1_12 = G12*ComplianceMatrix[0,3]
-        eta_23 = G23*ComplianceMatrix[0,4]
-        eta1_31 = G31*ComplianceMatrix[0,5]
-
-        v12 = -E1*ComplianceMatrix[1,0]
-        v32 = -E3*ComplianceMatrix[1,2]
-        eta2_12 = G12*ComplianceMatrix[1,3]
-        eta2_23 = G23*ComplianceMatrix[1,4]
-        eta2_31 = G31*ComplianceMatrix[1,5]
-
-        v13 = -E1*ComplianceMatrix[2,0]
-        v23 = -E2*ComplianceMatrix[2,1]
-        eta3_12 = G12*ComplianceMatrix[2,3]
-        eta3_23 = G23*ComplianceMatrix[2,4]
-        eta3_31 = G31*ComplianceMatrix[2,5]
-
-        eta12_1 = E1*ComplianceMatrix[3,0]
-        eta12_2 = E2*ComplianceMatrix[3,1]
-        eta12_3 = E3*ComplianceMatrix[3,2]
-        mi12_23 = G23*ComplianceMatrix[3,4]
-        mi12_31 = G31*ComplianceMatrix[3,5]
-
-        eta23_1 = E1*ComplianceMatrix[4,0]
-        eta23_2 = E2*ComplianceMatrix[4,1]
-        eta23_3 = E3*ComplianceMatrix[4,2]
-        mi23_12 = G12*ComplianceMatrix[4,3]
-        mi23_31 = G23*ComplianceMatrix[4,5]
-
-        eta31_1 = E1*ComplianceMatrix[5,0]
-        eta31_2 = E2*ComplianceMatrix[5,1]
-        eta31_3 = E3*ComplianceMatrix[5,2]
-        mu31_12 = G12*ComplianceMatrix[5,3]
-        mi31_23 = G23*ComplianceMatrix[5,4]
-
-        EngineeringConstants = {
-            "E1": E1,
-            "E2": E2,
-            "E3" : E3,
-            "G12" : G12,
-            "G23" : G23,
-            "G31" : G31,
-            "v21" : v21,
-            "v31" : v31,
-            "eta1_12" : eta1_12,
-            "eta_23" : eta_23,
-            "eta1_31" : eta1_31,
-            "v12" : v12,
-            'v32' : v32,
-            'eta2_12' : eta2_12,
-            'eta2_23' : eta2_23,
-            'eta2_31' : eta2_31,
-            'v13' : v13,
-            'v23' : v23,
-            'eta3_12' : eta3_12,
-            'eta3_23' : eta3_23,
-            'eta3_31' : eta3_31,
-            'eta12_1' : eta12_1,
-            'eta12_2' : eta12_2,
-            'eta12_3' : eta12_3,
-            'mi12_23' : mi12_23,
-            'mi12_31' : mi12_31,
-            'eta23_1' : eta23_1,
-            'eta23_2' : eta23_2,
-            'eta23_3' : eta23_3,
-            'mi23_12' : mi23_12,
-            'mi23_31' : mi23_31,
-            'eta31_1' : eta31_1,
-            'eta31_2' : eta31_2,
-            'eta31_3' : eta31_3,
-            'mu31_12' : mu31_12,
-            'mi31_23' : mi31_23
-        }
+        CHECK_FOLDER = os.path.isdir(folder)
         
-        self.EngineerinConstants = EngineeringConstants
-        return EngineeringConstants
+        if not CHECK_FOLDER:
+            os.makedirs(folder)
 
+
+    def HomogenizeResults(self,results_folder = 'Default',BoundaryConditions='ALL'):
+        self.PostProcessFiniteElement = PostProcessing(results_folder,BoundaryConditions)
+        return None
+
+    def ExportStiffness(self, folder, name="stiffness"):
+        self.CheckIfFolderExist(folder)
+        return self.PostProcessFiniteElement.ExportStiffness(folder,name)
 
     def TransformToNumpy(self):
         self.stiffness_matrix = np.zeros((6,6))
@@ -604,82 +537,6 @@ class AnisoIndex(NumptArrrayToBmatrix):
 
         self.TransformationMatrix = np.array([v1,v2,v3])
 
-    # def WriteVoigtNotationOfTheMatrix(self,alternative_matrix='None'):
-    #     '''
-    #     Writes the voigt notation of the read matrix from Finite Element Analysis
-    #     '''
-    #     if alternative_matrix=='None':
-    #         S = self.compliance_matrix
-    #     else:
-    #         S = alternative_matrix
-    #     # S = np.random.randint(100, size=(6, 6))
-
-    #     # print("Old C")
-    #     # print(S)
-        
-    #     self.old_compliance = np.zeros((6,6))
-
-    #     for i in range(6):
-    #         for j in range(6):
-    #             self.old_compliance[i,j] = S[i,j]
-
-    #     trans1 = np.zeros((6,6))
-    #     trans2 = np.zeros((6,6))
-
-    #     def ChangePositions(a,b,c,d):
-    #         '''
-    #         Change the position of the element C[a,b] with the element
-    #         C[c,d]
-    #         '''
-    #         aux = S[c,d]
-    #         # print(aux)
-    #         # print(C[a,b])
-    #         S[c,d]=S[a,b]
-    #         S[a,b]=aux
-        
-    #     # Changing xy->xz
-
-    #     lines_to_change = [0,1,2]
-
-    #     for line in lines_to_change:
-    #         ChangePositions(line,5,line,3)
-
-    #     columns_to_change = [0,1,2,3,4,5]
-
-    #     for column in columns_to_change:
-    #         ChangePositions(3,column,5,column)
-
-    #     ChangePositions(3,5,3,3)
-    #     ChangePositions(5,5,5,3)
-
-    #     for i in range(6):
-    #         for j in range(6):
-    #             trans1[i,j]=S[i,j]
-
-    #     # Changing xz->yz
-
-    #     lines_to_change = [0,1,2]
-
-    #     for line in lines_to_change:
-    #         ChangePositions(line,4,line,3)
-        
-    #     columns_to_change = [0,1,2,3,4,5]
-
-    #     for column in columns_to_change:
-    #         ChangePositions(3,column,4,column)
-        
-    #     ChangePositions(3,4,3,3)
-    #     ChangePositions(4,4,4,3)
-
-    #     for i in range(6):
-    #         for j in range(6):
-    #             trans2[i,j]=S[i,j]
-
-    #     self.compliance_matrix = S
-    #     # print("xy->xz")
-    #     # print(trans1)
-    #     # print("xz->yz")
-    #     # print(trans2)
 
     def IndexTranformation(self,i,j):
 
