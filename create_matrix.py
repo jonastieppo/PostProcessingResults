@@ -10,9 +10,9 @@ class NumptArrrayToBmatrix():
     def print_outarquive(self):
         print(self.information)
 
-    def WriteTexBmatrixFromNpArray(self,array):
+    def WriteTexBmatrixFromNpArray(self,array,name="tex_arquive"):
 
-        f = open("tex_arquive.tex", "w")
+        f = open(f"{name}.tex", "w")
         f.write("\\begin{bmatrix}\n")
         def TransformArray():
             for each_row in range(6):
@@ -26,9 +26,9 @@ class NumptArrrayToBmatrix():
         f.write("\\end{bmatrix}\n")
         f.close()
 
-    def WriteTexBmatrix(self):
+    def WriteTexBmatrix(self, name="tex_arquive"):
         
-        f = open("tex_arquive.tex", "w")
+        f = open(f"{name}.tex", "w")
         f.write("\\begin{bmatrix}\n")
         def TransformArray():
             for each_row in self.information.index:
