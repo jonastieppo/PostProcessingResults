@@ -4,6 +4,10 @@
 from create_matrix import NumptArrrayToBmatrix
 import numpy as np
 import math as m
+from PostProcessing_homot_tool import PostProcessing
+import os
+from CLT import*
+# from kelvin_reuss import WriteTexBmatrix
 # from PostProcessing import CalculateCalculateEngineeringConstants
 # from principal_directions_anisotropy import PrincipalAnisotropyDiretions
 class Invariants():
@@ -114,12 +118,21 @@ class TensorContracion():
                 b=b+1
             a=a+1
         
-class AnisoIndex(NumptArrrayToBmatrix):
+class AnisoIndex(NumptArrrayToBmatrix,PostProcessing):
 
+    
+    def __init__(self,file=False):
+        self.name = "SUBC"
+        pass
 
-    def __init__(self,file):
+    def CalculateIndicators(self,file):
+        '''
+        Read Stiffness.out file, and calculate indicators
+        '''
+
 
         self.read_matrix(file)
+        self.WriteVoigtNotationOfTheMatrix()
         self.OrthoMaterial()
         self.IsoTransMaterial()
         self.IsoMaterial()
@@ -158,99 +171,39 @@ class AnisoIndex(NumptArrrayToBmatrix):
         self.ZenerIndexCalculation()
         self.FrobenniusNorm()
         # 
-    def CalculateCalculateEngineeringConstants(self):
+
+    def WriteTexBmatrixFromNpArray(self,array,name="tex_arquive"):
+        return super().WriteTexBmatrixFromNpArray(array,name=name)
+
+    def PrintPretty(string, format="{:8.3}"):
+        print(f"{format}".format(string))
+
+    def CheckIfFolderExist(self,folder):
         '''
-        Method to calculate the Engi;neering Constants
+        Check if the folder exists. If don't, create it
         '''
-        # df = pd.DataFrame(ComplianceMatrix)
-
-        ComplianceMatrix = self.compliance_matrix_original
-
-        E1 = 1/ComplianceMatrix[0,0]
-        E2 = 1/ComplianceMatrix[1,1]
-        E3 = 1/ComplianceMatrix[2,2]
-        G12 = 1/ComplianceMatrix[3,3]
-        G23 = 1/ComplianceMatrix[4,4]
-        G31 = 1/ComplianceMatrix[5,5]
-
-        v21 = -E2*ComplianceMatrix[0,1]
-        v31 = -E3*ComplianceMatrix[0,2]
-        eta1_12 = G12*ComplianceMatrix[0,3]
-        eta_23 = G23*ComplianceMatrix[0,4]
-        eta1_31 = G31*ComplianceMatrix[0,5]
-
-        v12 = -E1*ComplianceMatrix[1,0]
-        v32 = -E3*ComplianceMatrix[1,2]
-        eta2_12 = G12*ComplianceMatrix[1,3]
-        eta2_23 = G23*ComplianceMatrix[1,4]
-        eta2_31 = G31*ComplianceMatrix[1,5]
-
-        v13 = -E1*ComplianceMatrix[2,0]
-        v23 = -E2*ComplianceMatrix[2,1]
-        eta3_12 = G12*ComplianceMatrix[2,3]
-        eta3_23 = G23*ComplianceMatrix[2,4]
-        eta3_31 = G31*ComplianceMatrix[2,5]
-
-        eta12_1 = E1*ComplianceMatrix[3,0]
-        eta12_2 = E2*ComplianceMatrix[3,1]
-        eta12_3 = E3*ComplianceMatrix[3,2]
-        mi12_23 = G23*ComplianceMatrix[3,4]
-        mi12_31 = G31*ComplianceMatrix[3,5]
-
-        eta23_1 = E1*ComplianceMatrix[4,0]
-        eta23_2 = E2*ComplianceMatrix[4,1]
-        eta23_3 = E3*ComplianceMatrix[4,2]
-        mi23_12 = G12*ComplianceMatrix[4,3]
-        mi23_31 = G23*ComplianceMatrix[4,5]
-
-        eta31_1 = E1*ComplianceMatrix[5,0]
-        eta31_2 = E2*ComplianceMatrix[5,1]
-        eta31_3 = E3*ComplianceMatrix[5,2]
-        mu31_12 = G12*ComplianceMatrix[5,3]
-        mi31_23 = G23*ComplianceMatrix[5,4]
-
-        EngineeringConstants = {
-            "E1": E1,
-            "E2": E2,
-            "E3" : E3,
-            "G12" : G12,
-            "G23" : G23,
-            "G31" : G31,
-            "v21" : v21,
-            "v31" : v31,
-            "eta1_12" : eta1_12,
-            "eta_23" : eta_23,
-            "eta1_31" : eta1_31,
-            "v12" : v12,
-            'v32' : v32,
-            'eta2_12' : eta2_12,
-            'eta2_23' : eta2_23,
-            'eta2_31' : eta2_31,
-            'v13' : v13,
-            'v23' : v23,
-            'eta3_12' : eta3_12,
-            'eta3_23' : eta3_23,
-            'eta3_31' : eta3_31,
-            'eta12_1' : eta12_1,
-            'eta12_2' : eta12_2,
-            'eta12_3' : eta12_3,
-            'mi12_23' : mi12_23,
-            'mi12_31' : mi12_31,
-            'eta23_1' : eta23_1,
-            'eta23_2' : eta23_2,
-            'eta23_3' : eta23_3,
-            'mi23_12' : mi23_12,
-            'mi23_31' : mi23_31,
-            'eta31_1' : eta31_1,
-            'eta31_2' : eta31_2,
-            'eta31_3' : eta31_3,
-            'mu31_12' : mu31_12,
-            'mi31_23' : mi31_23
-        }
+        CHECK_FOLDER = os.path.isdir(folder)
         
-        self.EngineerinConstants = EngineeringConstants
-        return EngineeringConstants
+        if not CHECK_FOLDER:
+            os.makedirs(folder)
 
+
+    def HomogenizeResults(self,results_folder = 'Default',BoundaryConditions='ALL'):
+        self.PostProcessFiniteElement = PostProcessing(results_folder,BoundaryConditions)
+        return None
+
+    def CalculateEngConstants(self):
+        self.PostProcessFiniteElement.CalculateEngConstants()
+        self.EngineeringConstants = self.PostProcessFiniteElement.EngineeringConstants
+        return None
+
+
+    def ShowEngineeringConstants(self, Property='ALL'):
+        return self.PostProcessFiniteElement.ShowEngineeringConstants(Property=Property)
+
+    def ExportStiffness(self, folder, name="stiffness"):
+        self.CheckIfFolderExist(folder)
+        return self.PostProcessFiniteElement.ExportStiffness(folder,name)
 
     def TransformToNumpy(self):
         self.stiffness_matrix = np.zeros((6,6))
@@ -272,70 +225,11 @@ class AnisoIndex(NumptArrrayToBmatrix):
         self.compliance_matrix_original = A
         self.stiffness_matrix_original =np.linalg.inv(A)
 
-        self.WriteVoigtNotationOfTheMatrix()
+        # self.WriteVoigtNotationOfTheMatrix()
         self.stiffness_matrix = np.linalg.inv(self.compliance_matrix)
         self.stiffness_matrix_simmetric = self.TurnSimm(self.stiffness_matrix)
         self.compliance_matrix_simmetric = np.linalg.inv(self.stiffness_matrix_simmetric)
         
-
-    def TurnMatrixToVoid(self):
-        '''
-        Writes the compliance matrix in the voigt notation
-        '''
-        C = self.stiffness_matrix
-
-
-        C11 = C[0,0]
-        C12 = C[0,1]
-        C13 = C[0,2]
-        C14 = C[0,3]
-        C15 = C[0,4]
-        C16 = C[0,5]
-        C21 = C[1,0]
-        C22 = C[1,1]
-        C23 = C[1,2]
-        C24 = C[1,3]
-        C25 = C[1,4]
-        C26 = C[1,5]
-        C31 = C[2,0]
-        C32 = C[2,1]
-        C33 = C[2,2]
-        C34 = C[2,3]
-        C35 = C[2,4]
-        C36 = C[2,5]
-        C41 = C[3,0]
-        C42 = C[3,1]
-        C43 = C[3,2]
-        C44 = C[3,3]
-        C45 = C[3,4]
-        C46 = C[3,5]
-        C51 = C[4,0]
-        C52 = C[4,1]
-        C53 = C[4,2]
-        C54 = C[4,3]
-        C55 = C[4,4]
-        C56 = C[4,5]
-        C61 = C[5,0]
-        C62 = C[5,1]
-        C63 = C[5,2]
-        C64 = C[5,3]
-        C65 = C[5,4]
-        C66 = C[5,5]      
-
-        self.voigt_C = np.array([[C11,C12,C13,C16,C15,C14],
-                            [C21,C22,C23,C26,C25,C24],
-                            [C31,C32,C33,C36,C35,C34],
-                            [C61,C62,C63,C64,C65,C66],
-                            [C51,C52,C53,C54,C55,C56],
-                            [C41,C42,C43,C44,C45,C46]])
-
-
-        self.stiffness_matrix = self.voigt_C
-        self.stiffness_matrix_simmetric = self.TurnSimm(self.stiffness_matrix)
-        self.compliance_matrix = np.linalg.inv(self.stiffness_matrix)
-        self.compliance_matrix_simmetric = np.linalg.inv(self.stiffness_matrix_simmetric)
-
-
     def read_matrix(self,file):
         # Reads a matrix and stores as an 6x6 numpy array
         ClassInit = NumptArrrayToBmatrix()
@@ -343,6 +237,63 @@ class AnisoIndex(NumptArrrayToBmatrix):
         self.information=ClassInit.information
 
         self.TransformToNumpy()
+
+    def WriteVoigtNotationOfTheMatrix(self):
+        '''
+        Write the .out results in the voigt notation
+        '''
+        
+        C = self.stiffness_matrix_simmetric 
+        C_4_16 = [i for i in C[3,0:6]]
+        C_6_16 = [i for i in C[5,0:6]]
+
+        C[3,0:6]=C_6_16
+        C[5,0:6]=C_4_16
+
+        # Swapping fourth column with sixth column
+        temp = [i for i in C[0:6,3]]
+        C[0:6,3]=[i for i in C[0:6,5]]
+        C[0:6,5]=temp
+
+        # Swapping fourth line with fifth line
+        temp = [i for i in C[3,0:6]]
+        C[3,0:6]=[i for i in C[4,0:6]]
+        C[4,0:6]=temp
+
+        # Swapping fourth column with fifth column
+        temp = [i for i in C[0:6,3]]
+        C[0:6,3]=[i for i in C[0:6,4]]
+        C[0:6,4]=temp
+
+        self.stiffness_matrix_simmetric = C
+        self.compliance_matrix_simmetric = np.linalg.inv(self.stiffness_matrix_simmetric)
+
+        C_original = self.stiffness_matrix_original 
+
+        C_4_16 = [i for i in C_original[3,0:6]]
+        C_6_16 = [i for i in C_original[5,0:6]]
+
+        C_original[3,0:6]=C_6_16
+        C_original[5,0:6]=C_4_16
+
+        # Swapping fourth column with sixth column
+        temp = [i for i in C_original[0:6,3]]
+        C_original[0:6,3]=[i for i in C_original[0:6,5]]
+        C_original[0:6,5]=temp
+
+        # Swapping fourth line with fifth line
+        temp = [i for i in C_original[3,0:6]]
+        C_original[3,0:6]=[i for i in C_original[4,0:6]]
+        C_original[4,0:6]=temp
+
+        # Swapping fourth column with fifth column
+        temp = [i for i in C_original[0:6,3]]
+        C_original[0:6,3]=[i for i in C_original[0:6,4]]
+        C_original[0:6,4]=temp
+
+        self.stiffness_matrix_original_voigt = C_original
+
+        return None
 
 
     def Voigt(self,matrix):
@@ -623,82 +574,6 @@ class AnisoIndex(NumptArrrayToBmatrix):
 
         self.TransformationMatrix = np.array([v1,v2,v3])
 
-    def WriteVoigtNotationOfTheMatrix(self,alternative_matrix='None'):
-        '''
-        Writes the voigt notation of the read matrix from Finite Element Analysis
-        '''
-        if alternative_matrix=='None':
-            S = self.compliance_matrix
-        else:
-            S = alternative_matrix
-        # S = np.random.randint(100, size=(6, 6))
-
-        # print("Old C")
-        # print(S)
-        
-        self.old_compliance = np.zeros((6,6))
-
-        for i in range(6):
-            for j in range(6):
-                self.old_compliance[i,j] = S[i,j]
-
-        trans1 = np.zeros((6,6))
-        trans2 = np.zeros((6,6))
-
-        def ChangePositions(a,b,c,d):
-            '''
-            Change the position of the element C[a,b] with the element
-            C[c,d]
-            '''
-            aux = S[c,d]
-            # print(aux)
-            # print(C[a,b])
-            S[c,d]=S[a,b]
-            S[a,b]=aux
-        
-        # Changing xy->xz
-
-        lines_to_change = [0,1,2]
-
-        for line in lines_to_change:
-            ChangePositions(line,5,line,3)
-
-        columns_to_change = [0,1,2,3,4,5]
-
-        for column in columns_to_change:
-            ChangePositions(3,column,5,column)
-
-        ChangePositions(3,5,3,3)
-        ChangePositions(5,5,5,3)
-
-        for i in range(6):
-            for j in range(6):
-                trans1[i,j]=S[i,j]
-
-        # Changing xz->yz
-
-        lines_to_change = [0,1,2]
-
-        for line in lines_to_change:
-            ChangePositions(line,4,line,3)
-        
-        columns_to_change = [0,1,2,3,4,5]
-
-        for column in columns_to_change:
-            ChangePositions(3,column,4,column)
-        
-        ChangePositions(3,4,3,3)
-        ChangePositions(4,4,4,3)
-
-        for i in range(6):
-            for j in range(6):
-                trans2[i,j]=S[i,j]
-
-        self.compliance_matrix = S
-        # print("xy->xz")
-        # print(trans1)
-        # print("xz->yz")
-        # print(trans2)
 
     def IndexTranformation(self,i,j):
 
@@ -720,13 +595,13 @@ class AnisoIndex(NumptArrrayToBmatrix):
 
         return Struct[f"{i}{j}"]
     
-    def BulkModulusTensor(self,matrix):
+    def BulkModulusTensor(self):
 
         K = Invariants()
         K_matrix = K.matrix
 
         # M = self.ortho_matrix_stiffness
-        M = matrix
+        M = self.stiffness_matrix_simmetric
 
         for i in range(3):
             for j in range(i,3):
@@ -740,7 +615,7 @@ class AnisoIndex(NumptArrrayToBmatrix):
 
         return K
 
-    def DeviatoryModulusTensor(self,matrix):
+    def DeviatoryModulusTensor(self):
 
         '''
         Matrix is a 6x6 matrix 
@@ -748,7 +623,7 @@ class AnisoIndex(NumptArrrayToBmatrix):
 
         L = Invariants()
         L_matrix = L.matrix
-        M = matrix
+        M = self.stiffness_matrix_simmetric
 
         for i in range(3):
             for j in range(i,3):
@@ -1022,26 +897,6 @@ class AnisoIndex(NumptArrrayToBmatrix):
         self.stiffness_matrix_original = self.stiffness_matrix_original*factor
         self.compliance_matrix_original = np.linalg.inv(self.stiffness_matrix_original)
             
-    def CorrectStiffnessV3(self,factor):
-        '''
-        Method to correct the stiffness matrix by a factor
-
-        Plain weave ---- 1.173
-        Eight Harness Satin ---- 1.001
-        Twill-weave ---------  1.017
-
-        '''
-
-        #old procedure
-
-        self.old_compliance = self.old_compliance/factor
-        # self.stiffness_matrix =  self.stiffness_matrix*factor
-        # self.ortho_matrix_compliance = np.linalg.inv(self.stiffness_matrix)
-        self.old_stiffness = np.linalg.inv(self.old_compliance)
-        self.WriteVoigtNotationOfTheMatrix(alternative_matrix=self.old_compliance)
-        self.compliance_matrix_simmetric = self.TurnSimm(self.compliance_matrix)
-        self.stiffness_matrix_simmetric = np.linalg.inv(self.compliance_matrix_simmetric)
-            
     def CorrectStiffnessV2(self,Vg_1,Vg_2):
         '''
         Method to correct the stiffness matrix
@@ -1113,232 +968,484 @@ class AnisoIndex(NumptArrrayToBmatrix):
         self.ZenerIndexCalculation(experimental_matrix=True)
         self.FrobenniusNorm(experimental_matrix=True)
 
-# %%
-if __name__=="__main__":
-
-    import os
-
-    curren_folder = os.getcwd()
-
-    def PrintPretty(string):
-        print("{:8.3}".format(string))
-
-    # weaves = ["Plain Weave matrices",]
-    # folder = curren_folder+r"\Plain Weave matrices\UDBC"
-    folder = curren_folder
-    stiffness_arquive = folder+r"\stiffness_unidirectional.out"
-    ClassInitiation = AnisoIndex(stiffness_arquive)
-
-    # EglassVynil = {
-
-    #     'E1':57.5E3,
-    #     'E2':18.8E3,
-    #     'E3':18.8E3,
-    #     'G12':7.44E3,
-    #     'G23':7.26E3,
-    #     'G13':7.26E3,
-    #     'v12':0.25,
-    #     'v13':0.29,
-    #     'v23':0.29
-    # }
-
-    # VynilEster = {
-
-    #     'E1':3.4E3,
-    #     'v12':0.35
-    # }
-
-    # ClassInitiation.CompositeStiffnessMatrix(EglassVynil,VynilEster)
-    ClassInitiation.CorrectStiffness(factor=1)
-    ClassInitiation.CalculateCalculateEngineeringConstants()
-    # Matrix = ClassInitiation.stiffness_matrix_simmetric
-    # ClassInitiation.CorrectStiffness(factor=1.1)
-    A=ClassInitiation.CalculateCalculateEngineeringConstants()
-    list_to_show = zip(['E1','E2','G12','v12'],[A['E1'],A['E2'],A['G12'],A['v12'],A['v12']])
-    for label,item in list_to_show:
-        if label in ['E1','E2','G12']: 
-            item = item*0.001 #transforming to GPa
-        print("{},{:1.4}".format(label,item))
-
-
-
-    Au = ClassInitiation.aniso_index_user_material_simmetric
-    Az = ClassInitiation.ZenerIndex
-    Fr = ClassInitiation.Frobenius
-
-    # print("Norms: \n\n ++++++++++++")
-    # PrintPretty(Au)
-    # PrintPretty(Az)
-    # print(Fr)
-
-    matrix = ClassInitiation.stiffness_matrix_simmetric
-    K=ClassInitiation.BulkModulusTensor(matrix)
-    print("K invariants:")
-    PrintPretty(K.I1)
-    PrintPretty(K.I2)
-    PrintPretty(K.I3)
-    L=ClassInitiation.DeviatoryModulusTensor(matrix)
-    print("L invariants:")
-    PrintPretty(L.I1)
-    PrintPretty(L.I2)
-    PrintPretty(L.I3)
-
-    # ClassInitiation.PrincipalDirectionsOfAnisotropy(matrix)
-    # ClassInitiation.K
-
-    EngDictPlain = {
-
-        'E1':24.8E3,
-        'E2':24.8E3,
-        'E3':8.5E3,
-        'G12':4.2E3,
-        'G23':4.2E3,
-        'G13':4.2E3,
-        'v12':0.1,
-        'v13':0.28,
-        'v23':0.28
-    }
-
-
-
-    # EngDictTwill = {
-
-    #     'E1':19.2e3,
-    #     'E2':19.2e3,
-    #     'E3':10.92e3,
-    #     'G12':3.92e3,
-    #     'G23':3.78e3,
-    #     'G13':3.78e3,
-    #     'v12':0.13,
-    #     'v13':0.305,
-    #     'v23':0.305
-    # }
-
-    # EngDictSatin = {
-
-    #     'E1':25.6e3,
-    #     'E2':25.6e3,
-    #     'E3':15.65e3,
-    #     'G12':5.67e3,
-    #     'G23':5.42e3,
-    #     'G13':5.42e3,
-    #     'v12':0.13,
-    #     'v13':0.283,
-    #     'v23':0.283
-    # }
-    # ClassInitiation.SetExperimentalProperties(EngDictPlain)
-    # # ClassInitiation.ZenerIndexExperimental
-    # matrix = ClassInitiation.experimental_matrix_stiffness
-    # K=ClassInitiation.BulkModulusTensor(matrix)
-    # print("K invariants:")
-    # PrintPretty(K.I1)
-    # PrintPretty(K.I2)
-    # PrintPretty(K.I3)
-    # L=ClassInitiation.DeviatoryModulusTensor(matrix)
-    # print("L invariants:")
-    # PrintPretty(L.I1)
-    # PrintPretty(L.I2)
-    # PrintPretty(L.I3)
-
+class ComparetoCLT():
     '''
-    CLT Comparison
+    Class to execute the comparison within the CLT
     '''
-    # from CLT import*
+    def __init__(self,matrix):
 
-    # Eight_harness_experimental_CLT()
+        self.Contraction = TensorContracion(matrix)
+        self.C_contracted = self.Contraction.C_contract
 
-    matrix = ClassInitiation.stiffness_matrix_simmetric
+        self.S_contracted = np.linalg.inv(self.C_contracted)
+        self.Calculate_eng()
+        self.name = "SUBC"
 
-    ClassContraction = TensorContracion(matrix)
-    c_new=ClassContraction.C_contract
 
-    def WriteTexBmatrix(matrix):
+    def Calculate_eng(self):
+        '''
+        Method to calculate de engineering constants from the contrated matrix
+        '''
+
+        S = self.S_contracted
+
+        E11 = 1/S[0,0]
+        E22 = 1/S[1,1]
+        G12 = 1/S[2,2]
+        v12 = -S[0,1]/S[1,1]
+
+        self.EngineeringConst = {
+            "E1":E11,
+            "E2":E22,
+            "G12":G12,
+            "v12":v12
+        }
+
+
+    def Calculate_CLT_eng(self,fiber,matrix,h):
+        '''
+        Calculates the engineering constants based on Barberos approach
+        '''
+        return compare_to_experiments(fiber,matrix,h)
+
+class GenerateTablesAndMatrix3D(NumptArrrayToBmatrix):
+
+    def __init__(self,SUBC,PBC,MBC,textile):
         
-        f = open("tex_arquive.tex", "w")
-        f.write("\\begin{bmatrix}\n")
-        def TransformArray():
-            for each_row in range(matrix.shape[0]):
-                for each_column in range(matrix.shape[1]):
-                    if each_column<matrix.shape[1]-1:
-                        # f.write("{:8.2E} & ".format(matrix[each_row,each_column]))
-                        f.write("{:8.2f} & ".format(matrix[each_row,each_column]))
-                    else: 
-                        # f.write("{:8.2E} \\\\ \n".format(matrix[each_row,each_column]))
-                        f.write("{:8.2f} \\\\ \n".format(matrix[each_row,each_column]))
 
-        TransformArray()
-        f.write("\\end{bmatrix}\n")
+        self.SUBC = SUBC
+        self.PBC = PBC
+        self.MBC = MBC
+        self.textile = textile
+        self.WriteCaptionNames()
+
+
+
+
+
+    def DeleteTexFiles(self):
+        list_files = os.listdir(os.getcwd())
+        tex_files = [a for a in list_files if a.endswith(".tex")]
+        [os.remove(file) for file in tex_files]
+        return "Deleted All *.tex files"
+        
+    def WriteCaptionNames(self):
+
+        if self.textile == "Plain-weave-Test":
+            self.caption_name = r"{\rightTwillOneTwoMiddle}"
+        
+        if self.textile == "plainWeave":
+            self.caption_name = r"{\plainWeaveMiddle}"
+        if self.textile == "twoTwoTwillWeave":
+            self.caption_name = r"{\twoTwoTwillWeaveMiddle}"
+        if self.textile == "fiveHarnessSatinWeave":
+            self.caption_name = r"{\fiveHarnessSatinWeave}"
+        if self.textile == "eightHarnessSatinWeave":
+            self.caption_name = r"{\eightHarnessSatinWeave}"
+        if self.textile == "basketWeave":
+            self.caption_name = r"{\basketWeave}"
+        if self.textile == "leftTwillOneTwo":
+            self.caption_name = r"{\leftTwillOneTwoMiddle}"
+        if self.textile == "rightTwillOneTwo":
+            self.caption_name = r"{\rightTwillOneTwoMiddle}"
+
+
+    def Write3dMatrix(self,tridimensionalObj):
+        self.bmatrix_name = self.textile+"_"+tridimensionalObj.name
+        super().WriteTexBmatrixFromNpArray(tridimensionalObj.stiffness_matrix_original_voigt,self.bmatrix_name)
+        self.GenerateEquationforMatrix(tridimensionalObj)
+
+    def OpenTextFile(self,file):
+        with open(f"{file}.tex", encoding='utf-8') as texfile:
+            self.texcontent = texfile.read()
+            
+
+    def BindAllFiles(self,separation="\n\n"):
+        '''
+        Method to bind all files generated. The easiest way is to generate a file, and then, automatically add to a variable, and after generate the file
+        '''
+        tex_all_files_content = fr"\section{{Resultados da análise 3D para o {self.caption_name}}}"
+        self.Write3dMatrix(self.SUBC)
+        self.OpenTextFile(f"b_matrix_{self.bmatrix_name}")
+        tex_all_files_content += separation+self.texcontent
+        self.Write3dMatrix(self.PBC)
+        self.OpenTextFile(f"b_matrix_{self.bmatrix_name}")
+        tex_all_files_content += separation+self.texcontent
+        self.Write3dMatrix(self.MBC)
+        self.OpenTextFile(f"b_matrix_{self.bmatrix_name}")
+        tex_all_files_content += separation+self.texcontent
+
+        self.GenerateTableEngConst()
+        self.OpenTextFile("3dTable")
+        tex_all_files_content += separation+self.texcontent
+
+
+        self.GenerateTableInvar()
+        self.OpenTextFile("3dTableInvariants")
+        tex_all_files_content+=separation+self.texcontent
+
+        self.GenerateTableIndicators()
+        self.OpenTextFile("3dTableIndicators")
+        tex_all_files_content+=separation+self.texcontent
+
+        with open(f"general_tex_{self.textile}.text", 'w', encoding='utf-8') as newfile:
+            newfile.write(tex_all_files_content)
+
+        return 
+
+
+    def GenerateEquationforMatrix(self,tridimensionalObj):
+        '''
+        \begin{equation}
+            {\stiffnessPlane}_{\text{\twoTwoTwillWeaveShort}}^{\proposedMBC} =
+            \begin{bmatrix} \label{eq:2_d_twill_weave_MBC}
+        21915.77 & 5121.02 & 5027.82 \\
+        5121.02 & 22076.02 & 5033.24 \\
+        5027.82 & 5033.24 & 10078.52 \\
+        \end{bmatrix} 
+        \end{equation}
+
+        '''
+        name=self.bmatrix_name + ".tex"
+        with open(name) as bmatrix:
+            b_matrix_text=bmatrix.read()
+
+        if tridimensionalObj.name=="SUBC":
+            BC_name = "SUBC"
+        if tridimensionalObj.name=="PBC":
+            BC_name = "PBC"
+        if tridimensionalObj.name=="MBC":
+            BC_name = "proposedMBC"
+
+
+        l1 = r"\begin{equation}"+"\n" 
+        # COM NOME DO TEXTIL
+        # l2 = r"{\stiffnessHomogenizedVoigt}_{\text{"+"\\"+f"{self.textile}"+r"}}^{"+"\\"+f"{BC_name}"+r"} ="+"\n"
+        # SEM NOME DO TEXTIL
+        l2 = r"{\stiffnessHomogenizedVoigt}^{"+"\\"+f"{BC_name}"+r"} ="+"\n"
+        l3 = r"\end{equation}"+"\n"
+        f = open(f"b_matrix_{self.bmatrix_name}.tex",'w')
+        f.write("".join([l1,l2,b_matrix_text,l3]))
         f.close()
 
-    C_new = TensorContracion(matrix)
-    C_new = C_new.C_contract
-    WriteTexBmatrix(C_new)
+    # def LatexTableKeyWords(self,**kwargs):
+    #     '''
+    #     Create code snnipets
+    #     '''
+    #     if kwargs.get("begin"):
+    #         return ""
+
+    def FormatTwoDecimals(self,number):
+        return "{:.2f}".format(number)
+
+    def GenerateTableEngConst(self):
+        '''
+        \begin{table}[h]
+        \centering
+        \caption{Effective material properties comparison for E-glass/vinylester plain-weave composite.}
+        \begin{tabular}{ccccccccccc}
+        \hline
+                                        b.c & $E_1$ & $E_2$ & $E_3$  & $G_{12}$ &  $G_{23}$ & $G_{31}$ & $\nu_{13}$ & $\nu_{23}$  & $\nu_{12}$\\
+        \hline
+        %INSERT DATA HERE
+        SUBC                            & 25.18 & 25.81 & 11.06 & 4.74 & 2.70 & 2.97 &  0.42 & 0.35 & 0.13\\
+        PBC                             & 24.66 & 25.12 & 10.87 & 4.84 & 2.76 & 2.76 &  0.41 & 0.41 & 0.13\\
+        MBC$^*$                             & 24.78 & 25.52 & 10.92 & 4.84 & 2.44 & 2.88 &  0.41 & 0.41 & 0.13\\
+        \hline
+        \end{tabular} \label{tab:plain_weave_results_compare}
+        \end{table}
+        '''
+        
+        Eng = self.ReturnEngineeringConstant3D
+        l1 = "\\begin{table}[H]\n"
+        l2 = "\centering\n"
+        l3 = f"\\caption{{Comparação de propriedadades efetivas para a trama {self.caption_name} }}\n"
+        l4 = "\\begin{tabular}{ccccccccccc}\n"
+        l5 = "\hline\n"
+        l6 = "                                c.c & $E_1$ & $E_2$ & $E_3$  & $G_{12}$ &  $G_{23}$ & $G_{31}$ & $\\nu_{13}$ & $\\nu_{23}$  & $\\nu_{12}$"+r"\\"+ "\n"
+        l7 = "\hline\n"
+        l8 = "%\n"
+        # Just loop trought the boundary conditions
+        # BC
+        l9 = []
+        BC = [self.SUBC,self.PBC,self.MBC]
+        print(self.SUBC)
+        for each_bc in BC:
+            if each_bc.name=="SUBC":
+                BC_name = "SUBC"
+            if each_bc.name=="PBC":
+                BC_name = "PBC"
+            if each_bc.name=="MBC":
+                BC_name = "proposedMBCText"
+
+            self.tridimensionalObj = each_bc
+            l9.append(fr"\{BC_name}                            & {Eng('E1')} & {Eng('E2')} & {Eng('E3')} & {Eng('G12')} & {Eng('G23')} & {Eng('G31')} &  {Eng('v31',factor=1)} & {Eng('v23',factor=1)} & {Eng('v12',factor=1)}\\"+"\n")
+
+        l9 = "".join(l9)
+        l10 = "\hline\n"
+        l11 = f"\end{{tabular}} \label{{tab:engconst_3d{self.textile}_{BC_name}}}\n"
+        l12 = "\end{table}"
+
+        f = open("3dTable.tex","+w",encoding='utf-8')
+        f.write("".join([l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11,l12]))
+        f.close()
+        return None
 
 
-    # WriteTexBmatrix(ClassInitiation.L)
-    # s_new = np.linalg.inv(c_new)
+    def GenerateTableInvar(self):
+        '''
+        \begin{table}[H]
+        \centering
+        \caption{Invariantes de $\bulkModulus$ e $\deviatoricModulus$ para o \plainWeaveMiddle}
+        \begin{tabular}{@{}lllllllll@{}}
+        \toprule
+        c.c.      & $I^K_1$ & $I^K_2$ & $I^K_3$ & $I^L_1$ & $I^L_2$ & $I^L_3$  \\ \midrule
+        \SUBC       & $1.08 \times 10^5$    & $3.82 \times 10^9$    & $4.36 \times 10^{13}$   & $9.22 \times 10^4$  & $2.76 \times 10^9$      & $2.65 \times 10^{13}$      \\
+        \PBC       & $1.08 \times 10^5$    & $3.79 \times 10^9$    & $4.31 \times 10^{13}$   & $9.09 \times 10^4$  & $2.68 \times 10^9$      & $2.55 \times 10^{13}$   \\
+        \proposedMBCText       & $1.08 \times 10^5$    & $3.80 \times 10^9$    & $4.34 \times 10^{13}$   & $9.08 \times 10^4$  & $2.68 \times 10^9$      & $2.55 \times 10^{13}$ \\ \bottomrule
+        \end{tabular} \label{tab:ivariants_plain_weave}
+        \end{table}
+        '''
+        l1 = "\\begin{table}[H]\n"
+        l2 = "\centering\n"
+        l3 = r"\caption{Invariantes de $\bulkModulus$ e $\deviatoricModulus$ para o " + f"{self.caption_name}" + "}\n"
+        l4 = "\\begin{tabular}{@{}lllllllll@{}}\n"
+        l5 = r"\toprule"+"\n"
+        l6 = r" c.c.      & $I^K_1$ & $I^K_2$ & $I^K_3$ & $I^L_1$ & $I^L_2$ & $I^L_3$  \\ \midrule"+"\n"
 
-    # print(s_new)
-    # WriteTexBmatrix(s_new)
-    # %%
-    from CLT import*
+        l7 = []
+        BC = [self.SUBC,self.PBC,self.MBC]
+        print(self.SUBC)
+        for each_bc in BC:
+            if each_bc.name=="SUBC":
+                BC_name = "SUBC"
+            if each_bc.name=="PBC":
+                BC_name = "PBC"
+            if each_bc.name=="MBC":
+                BC_name = "proposedMBCText"
 
-    C_new=GeneralOrtho()
-    S_new = np.linalg.inv(C_new)
-    print(S_new)
-    WriteTexBmatrix(S_new)
-    # %%
+            self.tridimensionalObj = each_bc
+            I = self.ReturnInvariant()
+            l7.append(fr"\{BC_name}                            & ${I[0]}$    & ${I[1]}$    & ${I[2]}$   & ${I[3]}$  & ${I[4]}$      & ${I[5]}$      \\"+"\n")
+        
+        l7 = "".join(l7)
+        l8 = r"\bottomrule"+"\n"
+        # l9 = r"\end{tabular} \label{tab:ivariants_plain_weave}"+"\n"
+        l9 = f"\end{{tabular}} \label{{tab:invariants3d_{self.textile}_{BC_name}}}\n"
+        l10 = r"\end{table}"+"\n"
 
-    S_CLT=S_anisotropic(Eng)
-    C_CLT = np.linalg.inv(S_CLT)
-    WriteTexBmatrix(S_CLT) 
-
-    # ABD=ABD_from_homogenization(Eng)
-
-    # WriteTexBmatrix(ABD)
-    # %%
-    '''
-    Calculating Invariants
-    '''
+        f = open('3dTableInvariants.tex','w',encoding='utf-8')
+        f.write("".join([l1,l2,l3,l4,l5,l6,l7,l8,l9,l10]))
+        f.close()
+        return None
 
 
-    Invar2 = Invariants()
-    ClassInitiation.PrincipalDirectionsOfAnisotropy(ClassInitiation.stiffness_matrix_simmetric)
-    Invar2.matrix = ClassInitiation.K.matrix
-    Invar2.CalculateInvariants()
-    Invar2.PrinpipalAxys()
-    # print("Eig vec")
-    # print(Invar2.eig_val)
-    PrincipalTrans=Invar2.Principal
+    def GenerateTableIndicators(self):
+        '''
 
-    WriteTexBmatrix(PrincipalTrans)
+        '''
 
-    # %%
-    '''
-    Comparing Tranformation Matrix
-    '''
-    ClassInitiation.PrincipalDirectionsOfAnisotropy(ClassInitiation.experimental_matrix_stiffness)
-    Invar = Invariants()
-    Invar.matrix = ClassInitiation.K.matrix
-    Invar.CalculateInvariants()
-    # Invar.PrinpipalAxys()
+        l1 = "\\begin{table}[H]\n"
+        l2 = "\centering\n"
+        l3 = r"\caption{Indicadores anisotrópicos para o "+f"{self.caption_name}"+r" analisado}"+"\n"
+        l4 = r"\begin{tabular}{cccc}"+"\n"
+        l5 = r"\toprule"+"\n"
+        l6 = r"c.c. &  $\universalAnisotropyIndex$ & $\zenerAnisotropyIndex$ & $\frobenius$ \\ \midrule"+"\n"
+        
+        l7 = []
+        BC = [self.SUBC,self.PBC,self.MBC]
+        print(self.SUBC)
+        for each_bc in BC:
+            if each_bc.name=="SUBC":
+                BC_name = "SUBC"
+            if each_bc.name=="PBC":
+                BC_name = "PBC"
+            if each_bc.name=="MBC":
+                BC_name = "proposedMBCText"
 
-    T1 = Invar.eig_vec
+            self.tridimensionalObj = each_bc
 
-    Invar2 = Invariants()
-    ClassInitiation.PrincipalDirectionsOfAnisotropy(ClassInitiation.stiffness_matrix_simmetric)
-    Invar2.matrix = ClassInitiation.K.matrix
-    Invar2.CalculateInvariants()
-    Invar2.PrinpipalAxys()
-    # Invar2.TransformationMatrix()
-    T2 = Invar2.T
+            Au,Az,Fr = self.ReturnIndicator()
+        
+            l7.append(fr"\{BC_name}    &  {Au} & {Az} & {Fr}" +r"\\ "+"\n")
 
-    # %%
-    Compare = CompareTransformationMatrix(T1,T2)
+        l7 = "".join(l7)
+        l8 = r"\bottomrule"+"\n"
+        l9 = r"\end{tabular}"+r"\label{"+fr"tab:indicator_{self.textile}_{BC_name}"+"}"+"\n"
+        l10 = r"\end{table}"+"\n"
 
-    Compare.compare
-    # %%
-    Contraction = TensorContracion(tensor=ClassInitiation.stiffness_matrix_simmetric)
-    ContractedMatrix=Contraction.C_contract
-    WriteTexBmatrix(ContractedMatrix)
+        f = open('3dTableIndicators.tex','w',encoding='utf-8')
+        f.write("".join([l1,l2,l3,l4,l5,l6,l7,l8,l9,l10]))
+        f.close()
+
+        return None
+
+    def ReturnIndicator(self):
+
+        Au = self.tridimensionalObj.aniso_index_user_material_simmetric
+        Az = self.tridimensionalObj.ZenerIndex
+        Fr = self.tridimensionalObj.Frobenius
+
+        return "{:1.2f}".format(Au),"{:1.2f}".format(Az),int(Fr)
+
+        
+    def ReturnPrettyFormatExponencial(self,number):
+        A="{:1.2E}".format(number).split("E")[0]
+        B="{:1.2E}".format(number).split("E")[1]
+        B = int(B)
+
+        return A+r" \times"+" 10^{"+f"{B}"+"}"
+    
+
+    def ReturnInvariant(self):
+        K = self.tridimensionalObj.BulkModulusTensor()
+        L = self.tridimensionalObj.DeviatoryModulusTensor()
+        R = self.ReturnPrettyFormatExponencial
+        return [R(K.I1),R(K.I2),R(K.I3),R(L.I1),R(L.I2),R(L.I3)]
+
+    def ReturnEngineeringConstant3D(self,Prop,factor=0.001):
+        '''
+        factor = correction of GPa
+        '''
+        # must defint 3d object
+        return self.FormatTwoDecimals(self.tridimensionalObj.PostProcessFiniteElement.EngineeringConstants[f'{Prop}']*factor)
+
+class GenerateTablesAndMatrix2D(GenerateTablesAndMatrix3D, NumptArrrayToBmatrix):
+
+    def __init__(self, SUBC, PBC, MBC, textile):
+        # self.WriteCaptionNames()
+        super().__init__(SUBC, PBC, MBC, textile)
+
+    def WriteCaptionNames(self):
+        return super().WriteCaptionNames()
+        
+    def BindAllFiles(self, separation="\n\n"):
+        '''
+        Method to bind all files generated. The easiest way is to generate a file, and then, automatically add to a variable, and after generate the file
+        '''
+        tex_all_files_content = fr"\section{{Resultados da análise 2D para o {self.caption_name}}}"
+        self.WriteBmatrix2D(self.SUBC)
+        self.OpenTextFile(f"b_matrix_{self.bmatrix_name}")
+        tex_all_files_content += separation+self.texcontent
+        self.WriteBmatrix2D(self.PBC)
+        self.OpenTextFile(f"b_matrix_{self.bmatrix_name}")
+        tex_all_files_content += separation+self.texcontent
+        self.WriteBmatrix2D(self.MBC)
+        self.OpenTextFile(f"b_matrix_{self.bmatrix_name}")
+        tex_all_files_content += separation+self.texcontent
+
+        self.GenerateTableEngConst()
+        self.OpenTextFile("2dEngineeringConst")
+        tex_all_files_content += separation+self.texcontent
+
+        with open(f"general_tex_{self.textile}_2d.text", 'w', encoding='utf-8') as newfile:
+            newfile.write(tex_all_files_content)
+
+    def WriteBmatrix2D(self,bidimensionalOBJ):
+        self.bmatrix_name=self.textile+"_"+bidimensionalOBJ.name+"_2d"
+        super().WriteTexBmatrixFromNpArray(bidimensionalOBJ.C_contracted,self.bmatrix_name)
+        self.GenerateEquationforMatrix(bidimensionalOBJ)
+
+    def GenerateEquationforMatrix(self,bidimensionalOBJ):
+        '''
+        \begin{equation}
+            {\stiffnessPlane}_{\text{\twoTwoTwillWeaveShort}}^{\proposedMBC} =
+            \begin{bmatrix} \label{eq:2_d_twill_weave_MBC}
+        21915.77 & 5121.02 & 5027.82 \\
+        5121.02 & 22076.02 & 5033.24 \\
+        5027.82 & 5033.24 & 10078.52 \\
+        \end{bmatrix} 
+        \end{equation}
+
+        '''
+        name=self.bmatrix_name + ".tex"
+        with open(name) as bmatrix:
+            b_matrix_text=bmatrix.read()
+
+        if bidimensionalOBJ.name=="SUBC":
+            BC_name = "SUBC"
+        if bidimensionalOBJ.name=="PBC":
+            BC_name = "PBC"
+        if bidimensionalOBJ.name=="MBC":
+            BC_name = "proposedMBC"
+
+        # b_matrix_text="\n".join(b_matrix_text)
+
+        l1 = r"\begin{equation}"+"\n" 
+        # COM NOME DO TEXTIL
+        # l2 = r"{\stiffnessPlane}_{\text{"+"\\"+f"{self.textile}"+r"}}^{"+"\\"+f"{BC_name}"+r"} ="+"\n"
+        # SEM NOME DO TEXTIL
+        l2 = r"{\stiffnessPlane}_{\text{"+"\\"+f"{self.textile}"+r"}}^{"+"\\"+f"{BC_name}"+r"} ="+"\n"
+        l3 = r"\end{equation}"+"\n"
+        f = open(f"b_matrix_{self.bmatrix_name}.tex",'w')
+        f.write("".join([l1,l2,b_matrix_text,l3]))
+        f.close()
+
+    def GenerateOrganizedResults(self):
+        '''
+        Method to generate a giant text file with orna
+        '''
+        pass
+    
+    def GenerateTableEngConst(self):
+        '''
+        \begin{table}[H]
+        \centering
+        \caption{Constantes de engenharia da rigidez reduzida para o \twoTwoTwillWeaveMiddle}
+        \begin{tabular}{@{}lllllllll@{}}
+        % 
+        \toprule
+        c.c.      & $E_{11}$ & $E_{22}$ & $G_{12}$ & $\nu_{12}$ \\ \midrule
+        \SUBC       & 20.96    & 20.33    & 3.46     & 0.22      \\
+        \PBC        & 20.56    & 20.76    & 3.49     & 0.23      \\ 
+        \proposedMBCText        & 20.66    & 20.87    & 3.49     & 0.23  \\ \midrule
+        \ROM        & 18.76    & 18.97    & 2.48    &  0.12   \\
+        \bottomrule
+        \end{tabular}
+        \label{ec2}
+        \end{table}
+        '''
+        l1 = "\\begin{table}[H]\n"
+        l2 = r"\centering"+"\n"
+        l3 = r"\caption{Constantes de engenharia da rigidez reduzida para o padrão {"+"\\"+f"{self.textile}"+r"}}"+"\n"
+        l4 = r"\begin{tabular}{@{}lllllllll@{}}"+"\n"
+        l5 = r"%"+"\n"
+        l6 = r"\toprule"+"\n"
+        l7 = r"c.c.      & $E_{11}$ & $E_{22}$ & $G_{12}$ & $\nu_{12}$ \\ \midrule"+"\n"
+
+        l8 = []
+        BC = [self.SUBC,self.PBC,self.MBC]
+
+        for each_bc in BC:
+            if each_bc.name=="SUBC":
+                BC_name = "SUBC"
+            if each_bc.name=="PBC":
+                BC_name = "PBC"
+            if each_bc.name=="MBC":
+                BC_name = "proposedMBCText"
+
+            self.bidimensionalOBJ = each_bc
+
+            E = self.ReturnEngConst2D
+
+            l8.append(fr"\{BC_name}       & {E('E1')}     & {E('E2')}     & {E('G12')}      & {E('v12',factor=1)}      \\"+"\n")
+
+        l8 = "".join(l8)
+        l9 = r"\bottomrule"+"\n"
+        l10 = f"\end{{tabular}} \label{{tab:eng_const_2d_{self.caption_name}_{BC_name}}}\n"
+        l11 = r"\end{table}"+"\n"
+
+        f = open('2dEngineeringConst.tex','w', encoding='utf-8')
+        f.write("".join([l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11]))
+        f.close()
+
+        return None
+        
+    def FormatTwoDecimals(self, number):
+        return super().FormatTwoDecimals(number)
+
+    def ReturnEngConst2D(self,EngConst,factor=0.001):
+        return self.FormatTwoDecimals(self.bidimensionalOBJ.EngineeringConst[EngConst]*factor)
+
+    
 # %%
